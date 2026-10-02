@@ -55,8 +55,9 @@ jobs:
 
             jq '
               .displayName = "opencode (Open VSX Fork)"
-              | .description = "[Open VSX Fork] opencode for VS Code. Unmodified fork of anomalyco/opencode for Open VSX compatibility."
+              | .description = "[Open VSX Fork] opencode for VS Code. Modified fork of anomalyco/opencode to support v2 CLI and Open VSX compatibility."
               | .publisher = "ponces"
+              | .repository.url = "https://github.com/ponces/vscode-opencode"
               | .packageManager = "bun@1.4.2"
             ' package.json > package.json.tmp
             mv package.json.tmp package.json
