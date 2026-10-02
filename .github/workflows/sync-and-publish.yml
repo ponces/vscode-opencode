@@ -1,0 +1,108 @@
+name: Sync upstream and publish to Open VSX
+
+on:
+  schedule:
+    - cron: "0 9 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout target branch
+        uses: actions/checkout@v4
+        with:
+          ref: v2
+          fetch-depth: 0
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Sync extension sources from upstream
+        env:
+          UPSTREAM_BRANCH: v2
+        run: |
+          git remote add upstream https://github.com/anomalyco/opencode.git
+          git fetch upstream "$UPSTREAM_BRANCH:refs/remotes/upstream/$UPSTREAM_BRANCH"
+          git fetch origin "$UPSTREAM_BRANCH:refs/remotes/origin/$UPSTREAM_BRANCH"
+
+          upstream_extension=$(git subtree split --prefix=sdks/vscode "upstream/$UPSTREAM_BRANCH")
+          upstream_sha=$(git rev-parse "upstream/$UPSTREAM_BRANCH")
+          old_version=$(node -p 'require("./package.json").version')
+
+          if git merge-base --is-ancestor "$upstream_extension" HEAD; then
+            has_updates=false
+          else
+            has_updates=true
+          fi
+
+          if [ "$has_updates" = true ]; then
+            if ! git merge --no-commit --no-ff -X theirs "$upstream_extension"; then
+              git checkout --theirs -- .
+            fi
+
+            jq '
+              .displayName = "opencode (Open VSX Fork)"
+              | .description = "[Open VSX Fork] opencode for VS Code. Unmodified fork of anomalyco/opencode for Open VSX compatibility."
+              | .publisher = "ponces"
+              | .packageManager = "bun@1.4.2"
+            ' package.json > package.json.tmp
+            mv package.json.tmp package.json
+            sed -i 's/^vsce publish/# &/' script/publish
+            sed -i 's/^npx ovsx publish/npx -y ovsx publish/' script/publish
+            git show "upstream/$UPSTREAM_BRANCH:packages/identity/mark.svg" > images/button-dark.svg
+            git show "upstream/$UPSTREAM_BRANCH:packages/identity/mark-light.svg" > images/button-light.svg
+            git show "upstream/$UPSTREAM_BRANCH:packages/identity/mark-512x512.png" > images/icon.png
+
+            git add -A
+            git commit -m "chore(vscode): sync upstream ${upstream_sha:0:7}"
+          else
+            echo "No upstream changes found."
+            exit 0
+          fi
+
+          version=$(node -p 'require("./package.json").version')
+          should_publish=false
+          if [ "$version" != "$old_version" ]; then
+            if ! git ls-remote --exit-code --tags origin "refs/tags/vscode-v$version" >/dev/null 2>&1; then
+              should_publish=true
+              git tag "vscode-v$version"
+              git push origin "vscode-v$version"
+            fi
+          fi
+          git push origin "HEAD:refs/heads/$UPSTREAM_BRANCH"
+          echo "should_publish=$should_publish" >> "$GITHUB_OUTPUT"
+
+  publish:
+    needs: sync
+    if: needs.sync.outputs.should_publish == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout target branch
+        uses: actions/checkout@v4
+        with:
+          ref: v2
+          fetch-depth: 0
+
+      - uses: ./.github/actions/setup-bun
+
+      - run: git fetch --force --tags
+      - run: bun install -g @vscode/vsce
+
+      - name: Install extension dependencies
+        run: bun install
+
+      - name: Publish
+        run: |
+          ./script/publish
+        env:
+          OPENVSX_TOKEN: ${{ secrets.OPENVSX_TOKEN }}
