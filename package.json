@@ -1,9 +1,9 @@
 {
   "name": "opencode",
-  "displayName": "opencode",
-  "description": "opencode for VS Code",
+  "displayName": "opencode (Open VSX Fork)",
+  "description": "[Open VSX Fork] opencode for VS Code. Unmodified fork of anomalyco/opencode for Open VSX compatibility.",
   "version": "2.0.22",
-  "publisher": "sst-dev",
+  "publisher": "ponces",
   "repository": {
     "type": "git",
     "url": "https://github.com/anomalyco/opencode"
