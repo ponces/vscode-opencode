@@ -2,9 +2,8 @@
   "name": "opencode",
   "displayName": "opencode (Open VSX Fork)",
   "description": "[Open VSX Fork] opencode for VS Code. Modified fork of anomalyco/opencode to support v2 CLI and Open VSX compatibility.",
-  "version": "2.0.24",
+  "version": "2.0.25",
   "publisher": "ponces",
-  "packageManager": "bun@1.4.2",
   "repository": {
     "type": "git",
     "url": "https://github.com/ponces/vscode-opencode"
@@ -105,5 +104,6 @@
     "typescript": "^5.8.3",
     "@vscode/test-cli": "^0.0.11",
     "@vscode/test-electron": "^2.5.2"
-  }
+  },
+  "packageManager": "bun@1.4.2"
 }
