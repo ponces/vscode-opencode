@@ -58,8 +58,7 @@ export function activate(context: vscode.ExtensionContext) {
     })
 
     terminal.show()
-    const fileRef = getActiveFile()
-    terminal.sendText(`opencode${fileRef ? ` --prompt ${shellQuote(`In ${fileRef}`)}` : ""}`)
+    terminal.sendText("opencode")
   }
 
   function getActiveFile() {
